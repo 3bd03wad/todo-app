@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>مهامي</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3b4cca">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ---- Colors live here (CSS variables). Change them to re-theme the app ---- */
+:root {
+  color-scheme: light;
+  --bg: #e9eef4; --surface: #ffffff; --ink: #1b2733; --muted: #5f6f7f;
+  --line: #d5dde6; --accent: #3b4cca; --accent-ink: #ffffff;
+  --p1: #c8321f; --p2: #b7791f; --p3: #2f7d5b;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #131a22; --surface: #1c2631; --ink: #e8eef5; --muted: #9aabbb;
+    --line: #2f3d4c; --accent: #8c98ff; --accent-ink: #10131f;
+    --p1: #ff7d6b; --p2: #e9b04f; --p3: #5fc596;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #131a22; --surface: #1c2631; --ink: #e8eef5; --muted: #9aabbb;
+  --line: #2f3d4c; --accent: #8c98ff; --accent-ink: #10131f;
+  --p1: #ff7d6b; --p2: #e9b04f; --p3: #5fc596;
+}
+html { height: 100%; }
+body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink);
+  font-family: "IBM Plex Sans Arabic", system-ui, sans-serif; line-height: 1.6; }
+main { max-width: 560px; margin: 0 auto; padding: 20px 16px 80px; }
+h1 { font-size: 1.6rem; margin: 8px 0 2px; }
+.sub { color: var(--muted); margin: 0 0 18px; }
+
+/* add-task form */
+.add { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+.add input[type=text] { width: 100%; box-sizing: border-box; border: 0; background: transparent;
+  color: var(--ink); font: inherit; font-size: 1.05rem; padding: 6px 4px; outline: none; }
+.row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+select, input[type=date] { font: inherit; font-size: .9rem; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+button { font: inherit; cursor: pointer; }
+.btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px;
+  padding: 7px 18px; font-weight: 600; margin-inline-start: auto; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* filter tabs */
+.tabs { display: flex; gap: 6px; margin: 18px 0 10px; }
+.tab { background: transparent; color: var(--muted); border: 1px solid var(--line);
+  border-radius: 999px; padding: 4px 14px; }
+.tab[aria-pressed=true] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* task list */
+ul { list-style: none; margin: 0; padding: 0; }
+li { display: flex; align-items: center; gap: 10px; background: var(--surface);
+  border: 1px solid var(--line); border-inline-start: 4px solid var(--p3);
+  border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+li.p1 { border-inline-start-color: var(--p1); }
+li.p2 { border-inline-start-color: var(--p2); }
+li input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
+.txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.due { display: block; font-size: .8rem; color: var(--muted); }
+.due.late { color: var(--p1); font-weight: 600; }
+li.done .txt { text-decoration: line-through; color: var(--muted); }
+.del { background: transparent; border: 0; color: var(--muted); font-size: 1.2rem; padding: 4px 8px; }
+.del:hover { color: var(--p1); }
+.empty { text-align: center; color: var(--muted); padding: 28px 0; }
+
+/* undo toast */
+#toast { position: fixed; inset-inline: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  max-width: 520px; margin: 0 auto; background: var(--ink); color: var(--bg);
+  border-radius: 10px; padding: 10px 14px; display: none; align-items: center; justify-content: space-between; }
+#toast.show { display: flex; }
+#toast button { background: transparent; border: 0; color: var(--accent); font-weight: 600; }
+:root:not([data-theme="dark"]) #toast button { color: #aab4ff; }
+</style>
+</head>
+<body>
+<main>
+  <h1>مهامي</h1>
+  <p class="sub" id="count"></p>
+
+  <div class="add">
+    <input type="text" id="title" placeholder="اكتب مهمة جديدة واضغط Enter" maxlength="200" autocomplete="off">
+    <div class="row">
+      <select id="prio" aria-label="الأولوية">
+        <option value="1">أولوية عالية</option>
+        <option value="2">أولوية متوسطة</option>
+        <option value="3" selected>أولوية عادية</option>
+      </select>
+      <input type="date" id="due" aria-label="تاريخ الاستحقاق">
+      <button class="btn" id="addBtn">إضافة مهمة</button>
+    </div>
+  </div>
+
+  <div class="tabs" role="group" aria-label="تصفية المهام">
+    <button class="tab" data-f="all" aria-pressed="true">الكل</button>
+    <button class="tab" data-f="today" aria-pressed="false">النهاردة</button>
+    <button class="tab" data-f="done" aria-pressed="false">خلصت</button>
+  </div>
+
+  <ul id="list"></ul>
+</main>
+
+<div id="toast" role="status"><span id="toastMsg"></span><button id="undo">تراجع</button></div>
+
+<script>
+// ---- 1. State: the list of tasks lives in this array ----
+let tasks = [];
+let filter = "all";
+let lastChange = null;   // remembers the last action so "undo" works
+
+// ---- 2. Saving and loading (localStorage keeps tasks after you close the page) ----
+function load() {
+  try { tasks = JSON.parse(localStorage.getItem("tasks") || "[]"); }
+  catch (e) { tasks = []; }
+}
+function save() {
+  try { localStorage.setItem("tasks", JSON.stringify(tasks)); }
+  catch (e) { /* storage can be blocked; the app still works for this session */ }
+}
+
+// ---- 3. Helpers ----
+const $ = (id) => document.getElementById(id);
+const todayStr = () => new Date().toISOString().slice(0, 10);
+
+// ---- 4. Actions ----
+function addTask() {
+  const title = $("title").value.trim();
+  if (!title) { $("title").focus(); return; }
+  tasks.unshift({
+    id: Date.now(),
+    title,
+    prio: $("prio").value,
+    due: $("due").value,
+    done: false
+  });
+  $("title").value = "";
+  $("due").value = "";
+  save(); render();
+  $("title").focus();
+}
+
+function toggle(id) {
+  const t = tasks.find((x) => x.id === id);
+  t.done = !t.done;
+  lastChange = { type: "toggle", id };
+  save(); render();
+  showToast(t.done ? "تم إنهاء المهمة" : "رجعت المهمة");
+}
+
+function remove(id) {
+  const i = tasks.findIndex((x) => x.id === id);
+  lastChange = { type: "remove", task: tasks[i], index: i };
+  tasks.splice(i, 1);
+  save(); render();
+  showToast("تم حذف المهمة");
+}
+
+function undo() {
+  if (!lastChange) return;
+  if (lastChange.type === "toggle") {
+    const t = tasks.find((x) => x.id === lastChange.id);
+    if (t) t.done = !t.done;
+  } else {
+    tasks.splice(lastChange.index, 0, lastChange.task);
+  }
+  lastChange = null;
+  save(); render(); hideToast();
+}
+
+// ---- 5. Toast (the small undo bar at the bottom) ----
+let toastTimer;
+function showToast(msg) {
+  $("toastMsg").textContent = msg;
+  $("toast").classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, 5000);
+}
+function hideToast() { $("toast").classList.remove("show"); }
+
+// ---- 6. Drawing the screen ----
+function visible() {
+  if (filter === "done") return tasks.filter((t) => t.done);
+  if (filter === "today") return tasks.filter((t) => !t.done && t.due && t.due <= todayStr());
+  return tasks.filter((t) => !t.done).concat(tasks.filter((t) => t.done));
+}
+
+function render() {
+  const list = $("list");
+  list.innerHTML = "";
+  const items = visible();
+
+  items.sort((a, b) => a.done - b.done || a.prio - b.prio); // open tasks first, urgent first
+
+  if (!items.length) {
+    const msgs = { all: "مفيش مهام. اكتب أول مهمة فوق.", today: "مفيش مهام مستحقة النهاردة.", done: "لسه ما خلصتش أي مهمة." };
+    list.innerHTML = '<p class="empty">' + msgs[filter] + "</p>";
+  }
+
+  items.forEach((t) => {
+    const li = document.createElement("li");
+    li.className = "p" + t.prio + (t.done ? " done" : "");
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = t.done;
+    cb.setAttribute("aria-label", "إنهاء المهمة");
+    cb.onchange = () => toggle(t.id);
+
+    const txt = document.createElement("span");
+    txt.className = "txt";
+    txt.textContent = t.title;   // textContent (not innerHTML) keeps typed text safe
+    if (t.due) {
+      const d = document.createElement("span");
+      d.className = "due" + (!t.done && t.due < todayStr() ? " late" : "");
+      d.textContent = (d.className.includes("late") ? "متأخرة: " : "الاستحقاق: ") + t.due;
+      txt.appendChild(d);
+    }
+
+    const del = document.createElement("button");
+    del.className = "del"; del.textContent = "✕";
+    del.setAttribute("aria-label", "حذف المهمة");
+    del.onclick = () => remove(t.id);
+
+    li.append(cb, txt, del);
+    list.appendChild(li);
+  });
+
+  const open = tasks.filter((t) => !t.done).length;
+  $("count").textContent = open ? "فاضل " + open + " مهمة" : "كل المهام خلصت";
+}
+
+// ---- 7. Wiring buttons to actions ----
+$("addBtn").onclick = addTask;
+$("title").addEventListener("keydown", (e) => { if (e.key === "Enter") addTask(); });
+$("undo").onclick = undo;
+document.querySelectorAll(".tab").forEach((b) => {
+  b.onclick = () => {
+    filter = b.dataset.f;
+    document.querySelectorAll(".tab").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    render();
+  };
+});
+
+load(); render();
+
+// ---- 8. Offline support: the service worker caches the app files ----
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>
