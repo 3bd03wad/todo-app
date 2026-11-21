@@ -1,5 +1,5 @@
 // Service worker: saves the app files so it works without internet
-const CACHE = "todo-v1";
+const CACHE = "todo-v2";
 const FILES = ["./", "index.html", "manifest.json", "icon-192.png", "icon-512.png"];
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)));
